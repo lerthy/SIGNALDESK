@@ -17,3 +17,6 @@ export const PROVIDER_LABELS: Record<AiProvider, string> = {
   groq: 'AI-generated with Groq',
   template: 'Template draft, not AI-generated',
 };
+
+/** Mirrors the limit the API enforces on draft text. */
+export const MAX_DRAFT_LENGTH = 2000;

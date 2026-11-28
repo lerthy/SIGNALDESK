@@ -139,6 +139,25 @@ describe('DraftEditor', () => {
     expect(await screen.findByRole('textbox', { name: 'Your reply' })).toBeInTheDocument();
   });
 
+  it('keeps the edited text on screen when Regenerate fails', async () => {
+    let attempt = 0;
+    mockApi(() => (++attempt === 1 ? ok(template) : fail(429, 'Too many requests, slow down.')));
+    render(<DraftEditor discussionId="d1" />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Generate suggestion' }));
+    const box = await screen.findByRole('textbox', { name: 'Your reply' });
+    await user.clear(box);
+    await user.type(box, 'Hours of careful editing');
+
+    await user.click(screen.getByRole('button', { name: 'Regenerate' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests');
+    expect(screen.getByRole('textbox', { name: 'Your reply' })).toHaveValue(
+      'Hours of careful editing',
+    );
+    expect(screen.getByRole('button', { name: 'Save draft' })).toBeEnabled();
+  });
+
   it('keeps the text and shows an error when saving fails', async () => {
     mockApi((url, init) =>
       url.endsWith('/generate')

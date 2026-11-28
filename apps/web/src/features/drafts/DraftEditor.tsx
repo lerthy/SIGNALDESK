@@ -2,45 +2,45 @@ import { useState } from 'react';
 import { CopyButton } from '../../components/CopyButton';
 import { generateDraft, saveDraft, updateDraft, userMessage } from '../../lib/api';
 import type { DraftSuggestion, Tone } from '../../types/draft';
-import { PROVIDER_LABELS, TONE_LABELS } from './labels';
+import { MAX_DRAFT_LENGTH, PROVIDER_LABELS, TONE_LABELS } from './labels';
 
-const MAX_DRAFT_LENGTH = 2000;
-
-type Generation =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  // The tone is remembered from when the text was generated, not from the selector's current value.
-  | { status: 'ready'; suggestion: DraftSuggestion; tone: Tone };
+// The tone is remembered from when the text was generated, not from the selector's current value.
+interface Generated {
+  suggestion: DraftSuggestion;
+  tone: Tone;
+}
 
 type SaveState = { status: 'idle' | 'saving' | 'saved' } | { status: 'error'; message: string };
 
 export function DraftEditor({ discussionId }: { discussionId: string }) {
   const [tone, setTone] = useState<Tone>('friendly');
-  const [generation, setGeneration] = useState<Generation>({ status: 'idle' });
+  const [generated, setGenerated] = useState<Generated | null>(null);
+  const [loading, setLoading] = useState(false);
+  // Separate from `generated` on purpose: a failed Regenerate must not hide the text being edited.
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ status: 'idle' });
 
   async function generate() {
-    setGeneration({ status: 'loading' });
-    setSaveState({ status: 'idle' });
+    setLoading(true);
+    setGenerateError(null);
     try {
       const suggestion = await generateDraft(discussionId, tone);
       setText(suggestion.suggestedReply);
       // New text means a new draft: the saved one keeps the tone and provider it was created with.
       setSavedId(null);
-      setGeneration({ status: 'ready', suggestion, tone });
+      setSaveState({ status: 'idle' });
+      setGenerated({ suggestion, tone });
     } catch (err) {
-      setGeneration({
-        status: 'error',
-        message: userMessage(err, 'Could not generate a suggestion. Try again.'),
-      });
+      setGenerateError(userMessage(err, 'Could not generate a suggestion. Try again.'));
+    } finally {
+      setLoading(false);
     }
   }
 
   async function save() {
-    if (generation.status !== 'ready') return;
+    if (!generated) return;
     setSaveState({ status: 'saving' });
     try {
       if (savedId) {
@@ -49,8 +49,8 @@ export function DraftEditor({ discussionId }: { discussionId: string }) {
         const draft = await saveDraft({
           discussionId,
           draftText: text,
-          tone: generation.tone,
-          aiProvider: generation.suggestion.aiProvider,
+          tone: generated.tone,
+          aiProvider: generated.suggestion.aiProvider,
         });
         setSavedId(draft.id);
       }
@@ -62,8 +62,6 @@ export function DraftEditor({ discussionId }: { discussionId: string }) {
       });
     }
   }
-
-  const loading = generation.status === 'loading';
 
   return (
     <div className="mt-4 space-y-4">
@@ -92,31 +90,25 @@ export function DraftEditor({ discussionId }: { discussionId: string }) {
           disabled={loading}
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-60"
         >
-          {loading
-            ? 'Generating…'
-            : generation.status === 'ready'
-              ? 'Regenerate'
-              : 'Generate suggestion'}
+          {loading ? 'Generating…' : generated ? 'Regenerate' : 'Generate suggestion'}
         </button>
       </div>
 
-      {generation.status === 'error' && (
+      {generateError && (
         <p role="alert" className="text-sm text-danger">
-          {generation.message}
+          {generateError}
         </p>
       )}
 
-      {generation.status === 'ready' && (
+      {generated && (
         <div className="space-y-3">
           <p className="text-sm">
-            <span className="font-medium">
-              {PROVIDER_LABELS[generation.suggestion.aiProvider]}.
-            </span>{' '}
-            <span className="text-muted">{generation.suggestion.approach}</span>
+            <span className="font-medium">{PROVIDER_LABELS[generated.suggestion.aiProvider]}.</span>{' '}
+            <span className="text-muted">{generated.suggestion.approach}</span>
           </p>
-          {generation.suggestion.safetyWarning && (
+          {generated.suggestion.safetyWarning && (
             <p role="note" className="text-sm text-amber">
-              {generation.suggestion.safetyWarning}
+              {generated.suggestion.safetyWarning}
             </p>
           )}
 
@@ -131,6 +123,7 @@ export function DraftEditor({ discussionId }: { discussionId: string }) {
               if (saveState.status === 'saved') setSaveState({ status: 'idle' });
             }}
             maxLength={MAX_DRAFT_LENGTH}
+            readOnly={loading}
             rows={7}
             className="w-full rounded-md border border-line bg-canvas p-3 text-sm leading-relaxed"
           />
@@ -139,7 +132,7 @@ export function DraftEditor({ discussionId }: { discussionId: string }) {
             <button
               type="button"
               onClick={save}
-              disabled={saveState.status === 'saving' || text.trim() === ''}
+              disabled={saveState.status === 'saving' || loading || text.trim() === ''}
               className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-60"
             >
               {savedId ? 'Update draft' : 'Save draft'}

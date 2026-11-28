@@ -3,13 +3,19 @@ import { CopyButton } from '../../components/CopyButton';
 import { deleteDraft, updateDraft, userMessage } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import type { Draft, DraftStatus } from '../../types/draft';
-import { PROVIDER_LABELS, STATUS_LABELS, TONE_LABELS } from './labels';
+import { MAX_DRAFT_LENGTH, PROVIDER_LABELS, STATUS_LABELS, TONE_LABELS } from './labels';
 
 interface DraftCardProps {
   draft: Draft;
   onChange: (draft: Draft) => void;
   onDelete: (id: string) => void;
 }
+
+const STATUS_ACTIONS: { status: DraftStatus; label: string }[] = [
+  { status: 'reviewed', label: 'Mark reviewed' },
+  { status: 'dismissed', label: 'Dismiss' },
+  { status: 'draft', label: 'Reopen' },
+];
 
 const buttonClass =
   'rounded-md border border-line px-3 py-1.5 text-sm hover:border-muted disabled:opacity-60';
@@ -79,7 +85,7 @@ export function DraftCard({ draft, onChange, onDelete }: DraftCardProps) {
             id={`edit-${draft.id}`}
             value={text}
             onChange={(event) => setText(event.target.value)}
-            maxLength={2000}
+            maxLength={MAX_DRAFT_LENGTH}
             rows={6}
             className="w-full rounded-md border border-line bg-canvas p-3 text-sm leading-relaxed"
           />
@@ -116,36 +122,17 @@ export function DraftCard({ draft, onChange, onDelete }: DraftCardProps) {
               Edit
             </button>
             <CopyButton text={draft.draftText} />
-            {draft.status !== 'reviewed' && (
+            {STATUS_ACTIONS.filter((action) => action.status !== draft.status).map((action) => (
               <button
+                key={action.status}
                 type="button"
                 disabled={busy}
-                onClick={() => setStatus('reviewed')}
+                onClick={() => setStatus(action.status)}
                 className={buttonClass}
               >
-                Mark reviewed
+                {action.label}
               </button>
-            )}
-            {draft.status !== 'dismissed' && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setStatus('dismissed')}
-                className={buttonClass}
-              >
-                Dismiss
-              </button>
-            )}
-            {draft.status !== 'draft' && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setStatus('draft')}
-                className={buttonClass}
-              >
-                Reopen
-              </button>
-            )}
+            ))}
             {confirmingDelete ? (
               <>
                 <button

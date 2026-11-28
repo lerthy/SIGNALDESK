@@ -181,6 +181,20 @@ describe('draft lifecycle', () => {
     }
   });
 
+  it('sends an edited draft back to "draft", unless the request sets a status itself', async () => {
+    const app = appWith();
+    const id = await savedDraft(app);
+    await request(app).patch(`/api/drafts/${id}`).send({ status: 'reviewed' });
+
+    const edited = await request(app).patch(`/api/drafts/${id}`).send({ draftText: 'New wording' });
+    expect(edited.body.data).toMatchObject({ draftText: 'New wording', status: 'draft' });
+
+    const explicit = await request(app)
+      .patch(`/api/drafts/${id}`)
+      .send({ draftText: 'Again', status: 'reviewed' });
+    expect(explicit.body.data.status).toBe('reviewed');
+  });
+
   it('rejects an invalid status, an empty update and a malformed id', async () => {
     const app = appWith();
     const id = await savedDraft(app);
