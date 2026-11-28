@@ -23,10 +23,18 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   onClear: () => void;
   loading: boolean;
+  initialText?: string;
 }
 
-export function SearchBar({ source, onSourceChange, onSearch, onClear, loading }: SearchBarProps) {
-  const [text, setText] = useState('');
+export function SearchBar({
+  source,
+  onSourceChange,
+  onSearch,
+  onClear,
+  loading,
+  initialText = '',
+}: SearchBarProps) {
+  const [text, setText] = useState(initialText);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   function submit(value: string) {

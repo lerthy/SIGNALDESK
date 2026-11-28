@@ -4,7 +4,7 @@ import { SYSTEM_PROMPT, buildUserPrompt } from './prompt.js';
 describe('buildUserPrompt', () => {
   it('puts the discussion inside markers and states the tone', () => {
     const prompt = buildUserPrompt('What is a deductible?', 'professional');
-    expect(prompt).toContain('clear, polite and measured');
+    expect(prompt).toContain('formal, precise and neutral');
     expect(prompt).toContain('<<<DISCUSSION\nWhat is a deductible?\nDISCUSSION>>>');
   });
 
@@ -13,6 +13,13 @@ describe('buildUserPrompt', () => {
     const prompt = buildUserPrompt(attack, 'friendly');
     expect(prompt.match(/DISCUSSION>>>/g)).toHaveLength(1);
     expect(prompt.match(/<<<DISCUSSION/g)).toHaveLength(1);
+  });
+
+  it('gives each tone its own instruction', () => {
+    const prompts = (['friendly', 'professional', 'empathetic'] as const).map((tone) =>
+      buildUserPrompt('Q', tone),
+    );
+    expect(new Set(prompts).size).toBe(3);
   });
 
   it('tells the model to treat the discussion as untrusted data', () => {

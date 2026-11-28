@@ -1,5 +1,6 @@
 import { SearchX, Search, TriangleAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { addRecentSearch } from '../../lib/recentSearches';
 import { StateMessage } from '../../components/StateMessage';
 import type { SourceMode } from '../../types/discussion';
 import { SearchBar } from '../search/SearchBar';
@@ -31,13 +32,14 @@ function ResultsSkeleton() {
   );
 }
 
-export function DiscussionsView() {
+export function DiscussionsView({ initialQuery }: { initialQuery?: string }) {
   const { state, search, clear } = useDiscussionSearch();
   const [source, setSource] = useState<SourceMode>('demo');
   const [lastQuery, setLastQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   function runSearch(query: string) {
+    addRecentSearch(query);
     setLastQuery(query);
     setSelectedId(null);
     void search(query, source);
@@ -54,6 +56,11 @@ export function DiscussionsView() {
     // Old results belong to the old source, so drop them; the box keeps the typed text.
     handleClear();
   }
+
+  // A recent search chosen on the Overview page arrives as initialQuery and runs once on mount.
+  useEffect(() => {
+    if (initialQuery) runSearch(initialQuery);
+  }, []);
 
   const results = state.status === 'success' ? state.results : [];
   const selected = results.find((discussion) => discussion.id === selectedId) ?? null;
@@ -77,6 +84,7 @@ export function DiscussionsView() {
         onSearch={runSearch}
         onClear={handleClear}
         loading={state.status === 'loading'}
+        initialText={initialQuery}
       />
 
       <div className="mt-8">

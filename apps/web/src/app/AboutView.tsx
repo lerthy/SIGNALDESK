@@ -19,7 +19,7 @@ const SECTIONS = [
 
 export function AboutView() {
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <div className="max-w-2xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <h1 className="text-xl font-semibold tracking-tight">About SignalDesk</h1>
       <div className="mt-6 space-y-6">
         {SECTIONS.map(({ heading, body }) => (

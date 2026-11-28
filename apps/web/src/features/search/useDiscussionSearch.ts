@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, searchDiscussions } from '../../lib/api';
+import { searchDiscussions, userMessage } from '../../lib/api';
 import type { Discussion, SourceMode } from '../../types/discussion';
 
 export type SearchState =
@@ -26,7 +26,7 @@ export function useDiscussionSearch() {
       if (controller.signal.aborted) return;
       setState({
         status: 'error',
-        message: err instanceof ApiError ? err.message : 'Search failed. Try again.',
+        message: userMessage(err, 'Search failed. Try again.'),
       });
     }
   }, []);

@@ -5,6 +5,7 @@ import type { DiscussionRepository } from '../repositories/discussions.repositor
 import type { DraftRepository } from '../repositories/drafts.repository.js';
 import {
   createDraftSchema,
+  type DraftChanges,
   generateRequestSchema,
   idParamSchema,
   updateDraftSchema,
@@ -53,7 +54,12 @@ export function draftsRouter({ discussions, drafts, ai }: DraftsRouterDeps) {
 
   router.patch('/:id', async (req, res) => {
     const { id } = idParamSchema.parse(req.params);
-    const changes = updateDraftSchema.parse(req.body);
+    const parsed = updateDraftSchema.parse(req.body);
+    // New wording has not been reviewed by anyone yet, unless the caller sets a status explicitly.
+    const changes: DraftChanges =
+      parsed.draftText !== undefined && parsed.status === undefined
+        ? { ...parsed, status: 'draft' }
+        : parsed;
 
     const draft = await drafts.update(id, changes);
     if (!draft) throw new HttpError(404, 'Draft not found');

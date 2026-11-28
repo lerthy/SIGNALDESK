@@ -1,6 +1,7 @@
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { formatDate } from '../../lib/format';
 import type { Discussion } from '../../types/discussion';
+import { DraftEditor } from '../drafts/DraftEditor';
 import { EligibilityLabel } from './EligibilityLabel';
 
 interface DiscussionDetailProps {
@@ -69,11 +70,12 @@ export function DiscussionDetail({ discussion, onBack }: DiscussionDetailProps) 
         <p className="mt-1.5 text-sm">
           <EligibilityLabel eligible={discussion.draftEligible} />
         </p>
-        <p className="mt-1.5 text-sm text-muted">
-          {discussion.draftEligible
-            ? 'This discussion asks for general information, so a reply can be drafted for a person to review.'
-            : discussion.ineligibleReason}
-        </p>
+        {discussion.draftEligible ? (
+          // Keyed so switching discussions never carries a half-edited reply over to another one.
+          <DraftEditor key={discussion.id} discussionId={discussion.id} />
+        ) : (
+          <p className="mt-1.5 text-sm text-muted">{discussion.ineligibleReason}</p>
+        )}
       </section>
     </article>
   );
