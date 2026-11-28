@@ -29,8 +29,9 @@ export function createGroqProvider({
   apiKey: string;
   model: string;
 }): AiProvider {
-  // One retry covers a brief hiccup; the service falls back to the template if it still fails.
-  const client = new Groq({ apiKey, timeout: REQUEST_TIMEOUT_MS, maxRetries: 1 });
+  // No retries: the SDK would retry a timeout and double the wait, and the service already
+  // falls back to the template when this call fails.
+  const client = new Groq({ apiKey, timeout: REQUEST_TIMEOUT_MS, maxRetries: 0 });
   const responseSchema = z.toJSONSchema(modelDraftSchema);
   delete responseSchema.$schema;
 

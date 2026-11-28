@@ -1,11 +1,7 @@
-import type { Tone } from '../schemas/draft.schema.js';
+import type { ModelDraft, Tone } from '../schemas/draft.schema.js';
 
 export interface AiProvider {
-  generate(input: { content: string; tone: Tone }): Promise<{
-    suggestedReply: string;
-    approach: string;
-    safetyWarning: string;
-  }>;
+  generate(input: { content: string; tone: Tone }): Promise<ModelDraft>;
 }
 
 /** What the frontend receives from POST /api/drafts/generate. */
