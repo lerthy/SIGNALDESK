@@ -1,10 +1,12 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createApp } from './app.js';
+import { TEST_ORIGIN, fakeDiscussions, fakeDrafts } from './testing/fakes.js';
 
 const app = createApp({
-  env: { FRONTEND_ORIGIN: 'http://localhost:5173' },
-  discussions: { listDemo: async () => [], findDemoById: async () => null },
+  env: { FRONTEND_ORIGIN: TEST_ORIGIN },
+  discussions: fakeDiscussions(),
+  drafts: fakeDrafts(),
   ai: null,
 });
 

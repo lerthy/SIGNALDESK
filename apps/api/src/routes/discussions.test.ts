@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
+import { TEST_ORIGIN, fakeDiscussions, fakeDrafts } from '../testing/fakes.js';
 import type { DiscussionRepository } from '../repositories/discussions.repository.js';
 import type { Discussion } from '../types/discussion.js';
 
@@ -16,8 +17,9 @@ const sample: Discussion = {
 
 function appWith(repo: Pick<DiscussionRepository, 'listDemo'>) {
   return createApp({
-    env: { FRONTEND_ORIGIN: 'http://localhost:5173' },
-    discussions: { ...repo, findDemoById: async () => null },
+    env: { FRONTEND_ORIGIN: TEST_ORIGIN },
+    discussions: { ...fakeDiscussions(), ...repo },
+    drafts: fakeDrafts(),
     ai: null,
   });
 }
