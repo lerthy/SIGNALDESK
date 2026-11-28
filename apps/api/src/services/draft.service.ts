@@ -8,6 +8,17 @@ import { checkDraftEligibility } from './sensitivity.js';
 const PROVIDER_UNAVAILABLE_WARNING =
   'The AI provider was unavailable, so this is a template draft.';
 
+/** Shared by generating and saving, so the safety gate cannot be skipped by calling the save route directly. */
+export function assertDraftEligible(discussion: Discussion): void {
+  const eligibility = checkDraftEligibility(discussion.content);
+  if (!eligibility.eligible) {
+    throw new HttpError(
+      422,
+      eligibility.reason ?? 'A draft cannot be created for this discussion.',
+    );
+  }
+}
+
 function templateSuggestion(
   discussion: Discussion,
   tone: Tone,
@@ -27,13 +38,7 @@ export async function generateDraft(
   discussion: Discussion,
   tone: Tone,
 ): Promise<DraftSuggestion> {
-  const eligibility = checkDraftEligibility(discussion.content);
-  if (!eligibility.eligible) {
-    throw new HttpError(
-      422,
-      eligibility.reason ?? 'A draft cannot be created for this discussion.',
-    );
-  }
+  assertDraftEligible(discussion);
 
   if (!ai) return templateSuggestion(discussion, tone, null);
 

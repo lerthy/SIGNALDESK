@@ -1,0 +1,785 @@
+{
+  "info": {
+    "name": "SignalDesk API",
+    "description": "Requests and assertions for the SignalDesk API. Run the folders in order (or use the Collection Runner): the first search saves the discussion ids the later requests use.\n\nSet `baseUrl` to the Render URL to test production. Nothing here sends a message anywhere: drafts are only stored for human review.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "discussionId",
+      "value": ""
+    },
+    {
+      "key": "blockedDiscussionId",
+      "value": ""
+    },
+    {
+      "key": "suggestedReply",
+      "value": ""
+    },
+    {
+      "key": "aiProvider",
+      "value": ""
+    },
+    {
+      "key": "draftId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Envelope: data.status is ok, error is null', () => { pm.expect(body.data.status).to.eql('ok'); pm.expect(body.error).to.be.null; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Used by Render as the health check."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Discussions",
+      "item": [
+        {
+          "name": "Search demo discussions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Every result is synthetic and explains its match', () => body.data.forEach(d => { pm.expect(d.isSynthetic).to.be.true; pm.expect(d.matchExplanation).to.be.a('string').and.not.empty; }));",
+                  "pm.test('Sensitive discussions are flagged as not eligible', () => pm.expect(body.data.some(d => d.draftEligible === false && d.ineligibleReason)).to.be.true);",
+                  "const eligible = body.data.find(d => d.draftEligible);",
+                  "const blocked = body.data.find(d => !d.draftEligible);",
+                  "pm.collectionVariables.set('discussionId', eligible.id);",
+                  "pm.collectionVariables.set('blockedDiscussionId', blocked.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/discussions?query=insurance&source=demo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "discussions"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "insurance"
+                },
+                {
+                  "key": "source",
+                  "value": "demo"
+                }
+              ]
+            },
+            "description": "Saves one eligible and one blocked discussion id for the requests below."
+          }
+        },
+        {
+          "name": "Search with a hashtag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Hashtag finds tagged discussions', () => pm.expect(body.data.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/discussions?query=#deductible&source=demo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "discussions"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "#deductible"
+                },
+                {
+                  "key": "source",
+                  "value": "demo"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Search: no results",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Empty list, not an error', () => { pm.expect(body.data).to.eql([]); pm.expect(body.error).to.be.null; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/discussions?query=kubernetes&source=demo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "discussions"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "kubernetes"
+                },
+                {
+                  "key": "source",
+                  "value": "demo"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Search: query too short (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Validation message returned', () => { pm.expect(body.data).to.be.null; pm.expect(body.error.message).to.include('at least 2'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/discussions?query=a&source=demo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "discussions"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "a"
+                },
+                {
+                  "key": "source",
+                  "value": "demo"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Search Bluesky (503 until the live provider ships)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 503', () => pm.response.to.have.status(503));",
+                  "const body = pm.response.json();",
+                  "pm.test('Clear message, no fake results', () => pm.expect(body.error.message).to.include('not available'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/discussions?query=term life&source=bluesky",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "discussions"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "term life"
+                },
+                {
+                  "key": "source",
+                  "value": "bluesky"
+                }
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Drafts",
+      "item": [
+        {
+          "name": "Generate a draft (friendly)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Provider is identified', () => pm.expect(['groq', 'template']).to.include(body.data.aiProvider));",
+                  "pm.test('Has reply and approach', () => { pm.expect(body.data.suggestedReply).to.not.be.empty; pm.expect(body.data.approach).to.not.be.empty; });",
+                  "pm.collectionVariables.set('suggestedReply', body.data.suggestedReply);",
+                  "pm.collectionVariables.set('aiProvider', body.data.aiProvider);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "generate"]
+            },
+            "description": "Uses Groq when GROQ_API_KEY is set on the API, otherwise the labelled template fallback.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discussionId\": \"{{discussionId}}\",\n  \"tone\": \"friendly\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Generate for a sensitive discussion (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+                  "const body = pm.response.json();",
+                  "pm.test('Explains why drafting is blocked', () => pm.expect(body.error.message).to.include('sensitive personal circumstance'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "generate"]
+            },
+            "description": "The safety check runs before any AI call, so nothing is generated.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discussionId\": \"{{blockedDiscussionId}}\",\n  \"tone\": \"empathetic\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Generate with an invalid tone (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "generate"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discussionId\": \"{{discussionId}}\",\n  \"tone\": \"pushy\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Save the draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('Saved as a draft, with its source discussion', () => { pm.expect(body.data.status).to.eql('draft'); pm.expect(body.data.discussion.source).to.be.a('string'); });",
+                  "pm.collectionVariables.set('draftId', body.data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discussionId\": \"{{discussionId}}\",\n  \"draftText\": \"{{suggestedReply}}\",\n  \"tone\": \"friendly\",\n  \"aiProvider\": \"{{aiProvider}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Save for a sensitive discussion (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 422', () => pm.response.to.have.status(422));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts"]
+            },
+            "description": "Calling the save route directly cannot bypass the safety gate.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"discussionId\": \"{{blockedDiscussionId}}\",\n  \"draftText\": \"Trying to skip the safety check\",\n  \"tone\": \"friendly\",\n  \"aiProvider\": \"template\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List drafts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Includes the saved draft', () => pm.expect(body.data.map(d => d.id)).to.include(pm.collectionVariables.get('draftId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Edit the draft text",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Text updated', () => pm.expect(body.data.draftText).to.eql('Edited by a person before review.'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"draftText\": \"Edited by a person before review.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mark as reviewed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Status is reviewed (it was never sent)', () => pm.expect(body.data.status).to.eql('reviewed'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"reviewed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dismiss",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Status is dismissed', () => pm.expect(body.data.status).to.eql('dismissed'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"dismissed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reopen as draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Status is draft again', () => pm.expect(body.data.status).to.eql('draft'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"draft\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Invalid status: 'sent' (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('There is no sent status', () => pm.expect(body.data).to.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": "Only draft, reviewed and dismissed exist. Nothing is ever sent.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"sent\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Dashboard and cleanup",
+      "item": [
+        {
+          "name": "Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Counts come from real data', () => { pm.expect(body.data.discussions).to.be.above(0); pm.expect(body.data.drafts).to.have.all.keys('draft', 'reviewed', 'dismissed'); });",
+                  "pm.test('AI mode is reported', () => pm.expect(['groq', 'template']).to.include(body.data.aiProvider));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stats"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete the draft",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns the deleted id', () => pm.expect(body.data.id).to.eql(pm.collectionVariables.get('draftId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete it again (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 404', () => pm.response.to.have.status(404));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/{{draftId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "{{draftId}}"]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Malformed id (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Status is 400', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/drafts/not-a-uuid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "drafts", "not-a-uuid"]
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import type { Discussion } from '../types/discussion.js';
 export interface DiscussionRepository {
   listDemo(): Promise<Discussion[]>;
   findDemoById(id: string): Promise<Discussion | null>;
+  countDemo(): Promise<number>;
 }
 
 const COLUMNS = 'id, source, content, tags, published_at, is_synthetic';
@@ -37,6 +38,15 @@ export function createDiscussionRepository(db: SupabaseClient): DiscussionReposi
       const { data, error } = await db.from('discussions').select(COLUMNS).eq('is_synthetic', true);
       if (error) throw new Error(`Failed to load discussions: ${error.message}`);
       return data.map(toDiscussion);
+    },
+
+    async countDemo() {
+      const { count, error } = await db
+        .from('discussions')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_synthetic', true);
+      if (error) throw new Error(`Failed to count discussions: ${error.message}`);
+      return count ?? 0;
     },
 
     async findDemoById(id) {
