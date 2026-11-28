@@ -1,9 +1,11 @@
-import { Info, MessagesSquare } from 'lucide-react';
+import { FileText, Info, LayoutDashboard, MessagesSquare } from 'lucide-react';
 
-export type View = 'discussions' | 'about';
+export type View = 'overview' | 'discussions' | 'drafts' | 'about';
 
 const NAV_ITEMS = [
+  { view: 'overview', label: 'Overview', Icon: LayoutDashboard },
   { view: 'discussions', label: 'Discussions', Icon: MessagesSquare },
+  { view: 'drafts', label: 'Drafts', Icon: FileText },
   { view: 'about', label: 'About', Icon: Info },
 ] as const;
 
@@ -15,7 +17,7 @@ interface SidebarProps {
 export function Sidebar({ current, onNavigate }: SidebarProps) {
   return (
     <aside className="border-b border-line bg-surface lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:border-r lg:border-b-0">
-      <div className="flex items-center justify-between gap-6 px-4 py-3 lg:flex-col lg:items-stretch lg:gap-8 lg:px-5 lg:py-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 lg:flex-col lg:items-stretch lg:gap-8 lg:px-5 lg:py-6">
         <div className="flex items-center gap-2.5">
           <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
             <rect
@@ -42,7 +44,7 @@ export function Sidebar({ current, onNavigate }: SidebarProps) {
         </div>
 
         <nav aria-label="Main">
-          <ul className="flex gap-1 lg:flex-col">
+          <ul className="flex flex-wrap gap-1 lg:flex-col">
             {NAV_ITEMS.map(({ view, label, Icon }) => (
               <li key={view}>
                 <button
