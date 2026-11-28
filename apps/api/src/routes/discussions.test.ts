@@ -14,8 +14,12 @@ const sample: Discussion = {
   url: null,
 };
 
-function appWith(repo: DiscussionRepository) {
-  return createApp({ env: { FRONTEND_ORIGIN: 'http://localhost:5173' }, discussions: repo });
+function appWith(repo: Pick<DiscussionRepository, 'listDemo'>) {
+  return createApp({
+    env: { FRONTEND_ORIGIN: 'http://localhost:5173' },
+    discussions: { ...repo, findDemoById: async () => null },
+    ai: null,
+  });
 }
 
 describe('GET /api/discussions', () => {
