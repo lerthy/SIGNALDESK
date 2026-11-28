@@ -8,10 +8,17 @@ const valid = {
 };
 
 describe('loadEnv', () => {
-  it('applies defaults and treats an empty OPENAI_API_KEY as unset', () => {
-    const env = loadEnv({ ...valid, OPENAI_API_KEY: '' });
+  it('applies defaults and treats an empty GROQ_API_KEY as unset', () => {
+    const env = loadEnv({ ...valid, GROQ_API_KEY: '' });
     expect(env.PORT).toBe(3001);
-    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env.GROQ_API_KEY).toBeUndefined();
+  });
+
+  it('requires a model name when a Groq key is set', () => {
+    expect(() => loadEnv({ ...valid, GROQ_API_KEY: 'key' })).toThrow(/GROQ_MODEL/);
+    expect(loadEnv({ ...valid, GROQ_API_KEY: 'key', GROQ_MODEL: 'some-model' }).GROQ_MODEL).toBe(
+      'some-model',
+    );
   });
 
   it('lists missing variables without leaking values', () => {

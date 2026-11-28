@@ -4,7 +4,8 @@ import { createApp } from './app.js';
 
 const app = createApp({
   env: { FRONTEND_ORIGIN: 'http://localhost:5173' },
-  discussions: { listDemo: async () => [] },
+  discussions: { listDemo: async () => [], findDemoById: async () => null },
+  ai: null,
 });
 
 describe('GET /api/health', () => {
